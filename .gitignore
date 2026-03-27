@@ -1,0 +1,8 @@
+node_modules/
+*.db
+*.xlsx
+*.xls
+temp.*
+.~lock.*
+.claude/
+.vscode/
