@@ -46,6 +46,11 @@ db.serialize(() => {
   db.run(`ALTER TABLE documentos_habeis ADD COLUMN statusPgto TEXT DEFAULT ''`, () => {})
   db.run(`ALTER TABLE documentos_habeis ADD COLUMN dtPgtoPrincipal TEXT DEFAULT ''`, () => {})
   db.run(`ALTER TABLE documentos_habeis ADD COLUMN valorPago REAL`, () => {})
+  db.run(`ALTER TABLE documentos_habeis ADD COLUMN documentoPF TEXT DEFAULT ''`, () => {})
+  db.run(`ALTER TABLE documentos_habeis ADD COLUMN documentoTransf TEXT DEFAULT ''`, () => {})
+  db.run(`ALTER TABLE documentos_habeis ADD COLUMN dtImportacao TEXT DEFAULT ''`, () => {})
+  db.run(`ALTER TABLE documentos_habeis ADD COLUMN dtUltimaAtualizacao TEXT DEFAULT ''`, () => {})
+  db.run(`ALTER TABLE documentos_habeis ADD COLUMN statusAnterior TEXT DEFAULT ''`, () => {})
 
   db.run(`
     CREATE TABLE IF NOT EXISTS empenhos_planilha (
@@ -70,6 +75,23 @@ db.serialize(() => {
 
   // Migrações empenhos_planilha
   db.run(`ALTER TABLE empenhos_planilha ADD COLUMN vinculacao TEXT`, () => {})
+  db.run(`ALTER TABLE empenhos_planilha ADD COLUMN categDespesa TEXT DEFAULT ''`, () => {})
+
+  // Tabela de repasses financeiros para UG 135046
+  db.run(`
+    CREATE TABLE IF NOT EXISTS repasses (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      data          TEXT,
+      ugDestino     TEXT DEFAULT '135046',
+      situacao      TEXT,
+      fonte         TEXT,
+      vinculacao    TEXT,
+      categGasto    TEXT,
+      valor         REAL,
+      observacao    TEXT DEFAULT '',
+      criadoEm      TEXT DEFAULT (datetime('now','localtime'))
+    )
+  `)
 
 })
 

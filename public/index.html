@@ -12,10 +12,7 @@
   <span class="navbar-brand">SIAFI Reader</span>
 
   <div class="nav-group">
-    <div class="nav-file">
-      <button class="nav-btn">Importar XML</button>
-      <input type="file" id="inputXML" accept=".xml" />
-    </div>
+    <button id="btnImportXML" class="nav-btn">Importar XML</button>
     <div class="nav-file">
       <button class="nav-btn">Importar Planilha</button>
       <input type="file" id="inputPlanilha" accept=".xlsx,.xls" />
@@ -30,6 +27,7 @@
   <div class="nav-group">
     <button id="btnBancoDados"  class="nav-btn accent">Banco de Dados</button>
     <button id="btnRelatorioPF" class="nav-btn accent">Prog. Financeira</button>
+    <button id="btnRepasses"    class="nav-btn accent">Repasses</button>
   </div>
 
   <span class="nav-spacer"></span>
@@ -52,28 +50,19 @@
     <label>Status:
       <select id="filtroStatus">
         <option value="">Todos</option>
-        <option value="Dedução">Dedução</option>
-        <option value="Principal">Principal</option>
-        <option value="Parcial">Parcial</option>
+        <option value="Pendente">Pendente</option>
+        <option value="Realizado">Realizado</option>
       </select>
     </label>
     <span id="filtroContagem" class="filter-count"></span>
+    <div id="btnGerarRepasse" class="acoes-bar hidden"></div>
   </div>
 
   <div class="table-wrapper">
-    <table id="tabelaConsolidada">
-      <thead id="cabecalhoTabela">
-        <tr>
-          <th>Fornecedor</th><th>Empenho</th><th>Numero DH</th>
-          <th>Valor Bruto (R$)</th><th>Deducoes (R$)</th><th>Valor Liquido (R$)</th>
-          <th>Valor Pago (R$)</th><th>A Pagar (R$)</th><th>RPL</th>
-          <th>Fonte</th><th>PTRES</th><th>Grupo Despesa</th><th>Vinculacao</th><th>Status</th>
-        </tr>
-      </thead>
+    <table id="tabelaPrincipal">
+      <thead id="cabecalhoTabela"></thead>
       <tbody id="corpoTabela">
-        <tr>
-          <td colspan="14" class="empty">Importe o XML para visualizar os dados consolidados.</td>
-        </tr>
+        <tr><td colspan="16" class="empty">Importe o XML para visualizar os dados consolidados.</td></tr>
       </tbody>
     </table>
   </div>
@@ -157,6 +146,15 @@
           <label>Grupo (No) <input id="fGrupoDespesa" placeholder="3" /></label>
           <label>Grupo Despesa <input id="fDescGrupo" /></label>
           <label>Vinculacao <input id="fVinculacao" placeholder="400" /></label>
+          <label>Categ. Despesa
+            <select id="fCategDespesa">
+              <option value="">--</option>
+              <option value="C">C - Outras Despesas Correntes</option>
+              <option value="D">D - Investimento</option>
+              <option value="A">A - Pessoal e Enc. Sociais</option>
+              <option value="E">E - Inversao Financeira</option>
+            </select>
+          </label>
         </div>
         <div class="bd-form-actions">
           <button id="btnSalvarEmpenho" class="btn btn-success">Salvar</button>
@@ -173,6 +171,60 @@
             </tr>
           </thead>
           <tbody id="bdCorpo"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Repasses -->
+  <div id="modalRepasses" class="modal-overlay hidden">
+    <div class="modal-content modal-repasses">
+      <div class="modal-header">
+        <h2>Controle de Repasses - UG 135046</h2>
+        <button id="btnFecharRepasses" class="modal-close">&times;</button>
+      </div>
+      <div class="rep-toolbar">
+        <button id="btnNovoRepasse" class="btn btn-primary">Novo Repasse</button>
+        <span id="repTotalLabel" class="rep-total-label"></span>
+      </div>
+      <div id="repForm" class="rep-form hidden">
+        <input type="hidden" id="repId" />
+        <div class="rep-form-grid">
+          <label>Data <input type="date" id="repData" /></label>
+          <label>UG Destino <input id="repUG" value="135046" /></label>
+          <label>Situacao
+            <select id="repSituacao">
+              <option value="EXE001">EXE001 - Execucao Normal</option>
+              <option value="RAP001">RAP001 - Restos a Pagar</option>
+            </select>
+          </label>
+          <label>Fonte <input id="repFonte" placeholder="1000000000" /></label>
+          <label>Vinculacao <input id="repVinculacao" placeholder="400" /></label>
+          <label>Categoria de Gasto
+            <select id="repCateg">
+              <option value="C">C - Corrente</option>
+              <option value="D">D - Capital</option>
+            </select>
+          </label>
+          <label>Valor (R$) <input type="number" id="repValor" step="0.01" placeholder="0,00" /></label>
+          <label>Observacao <input id="repObs" placeholder="PF, NS, etc." /></label>
+        </div>
+        <div class="rep-form-actions">
+          <button id="btnSalvarRepasse" class="btn btn-success">Salvar</button>
+          <button id="btnCancelarRepasse" class="btn btn-secondary">Cancelar</button>
+        </div>
+      </div>
+      <div class="rep-table-wrapper">
+        <table class="rep-table">
+          <thead>
+            <tr>
+              <th>Data</th><th>UG</th><th>Situacao</th><th>Fonte</th>
+              <th>Vinculacao</th><th>Categ.</th><th class="valor">Valor (R$)</th>
+              <th>Obs.</th><th>Acoes</th>
+            </tr>
+          </thead>
+          <tbody id="repCorpo"></tbody>
+          <tfoot id="repTotal"></tfoot>
         </table>
       </div>
     </div>
