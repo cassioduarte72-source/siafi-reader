@@ -604,6 +604,14 @@ document.getElementById("btnImportXML").addEventListener("click", async () => {
     if (result.atualizados > 0) partes.push(`${result.atualizados} atualizado(s)`)
     if (result.liquidados > 0) partes.push(`${result.liquidados} liquidado(s)`)
     if (result.empenhosCadastrados > 0) partes.push(`${result.empenhosCadastrados} empenho(s) cadastrado(s)`)
+    // Diagnóstico de Estado — ajuda a identificar problemas de classificação
+    const d = result.diagEstado
+    if (d) {
+      partes.push(`[Estado: R=${d.realizado} P=${d.pendente} C=${d.cancelado}` +
+        (d.exemploDtPgto ? ` dtPgto="${d.exemploDtPgto}"` : " sem dtPgto") +
+        (d.comEstadoForcado ? ` estadoXML="${d.exemploEstadoRaw}"` : "") +
+        (d.exemploPendente ? ` ex.Pend=${d.exemploPendente}` : "") + `]`)
+    }
     mostrarStatus(partes.join(" | "), "ok")
     await consolidarEExibir()
   } catch (err) {

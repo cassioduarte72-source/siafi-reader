@@ -61,6 +61,18 @@ function parsearXMLSIAFI(xmlString) {
   const hoje = new Date().toISOString().slice(0, 10)
   const dados = []
 
+  // ── Diagnóstico de Estado (retornado junto com os dados para exibir na UI)
+  const diagEstado = { realizado: 0, pendente: 0, cancelado: 0,
+    comDtPgto: 0, comEstadoForcado: 0,
+    exemploDtPgto: "", exemploEstadoRaw: "", exemploPendente: "" }
+
+  // Trata valores de data como vazio se forem zeros ou placeholders SIAFI
+  const normData = (val) => {
+    const s = String(val || "").trim()
+    if (!s || /^0+$/.test(s) || /^0{2}[\/\-]0{2}[\/\-]0{4}$/.test(s) || s === "0000-00-00") return ""
+    return s
+  }
+
   for (let idx = 0; idx < dhList.length; idx++) {
     const dh = dhList[idx]
     const get = (parent, tag) => {
@@ -81,41 +93,17 @@ function parsearXMLSIAFI(xmlString) {
     const valorBrutoDH = db_ ? parseFloat(get(db_, "vlr") || "0") : 0
     const dataEmissao = db_ ? get(db_, "dtEmis") : ""
     const processo = db_ ? get(db_, "txtProcesso") : ""
-    const dtPgtoPrincipal = db_ ? get(db_, "dtPgtoReceb") : ""
+    const dtPgtoPrincipal = normData(db_ ? get(db_, "dtPgtoReceb") : "")
 
-    // ── DEBUG: imprime todos os campos do DH no primeiro registro para descobrir
-    //          o nome exato do campo "Estado" no XML do SIAFI desta UG.
-    //          Remover após confirmar o campo correto.
-    if (idx === 0 && db_) {
-      const camposDH = {}
-      for (let c = 0; c < dh.childNodes.length; c++) {
-        const node = dh.childNodes[c]
-        if (node.nodeName && node.nodeName !== "#text") {
-          camposDH[node.nodeName] = node.textContent ? node.textContent.trim().slice(0, 60) : ""
-        }
-      }
-      const camposBasicos = {}
-      for (let c = 0; c < db_.childNodes.length; c++) {
-        const node = db_.childNodes[c]
-        if (node.nodeName && node.nodeName !== "#text") {
-          camposBasicos[node.nodeName] = node.textContent ? node.textContent.trim().slice(0, 60) : ""
-        }
-      }
-      console.log(`[DEBUG XML] DH: ${numeroDH}`)
-      console.log(`[DEBUG XML] Campos raiz do DH:`, camposDH)
-      console.log(`[DEBUG XML] Campos de dadosBasicos:`, camposBasicos)
-    }
-
-    // ── Estado SIAFI: lê o campo diretamente do XML (prevalece sobre lógica derivada)
+    // ── Estado SIAFI: lê apenas campos com nome exato de estado (evita falsos positivos)
     const codEstadoRaw = (db_ ? get(db_, "codEstado") : "")
       || get(dh, "codEstado")
-      || get(dh, "estadoDH")
+      || get(dh, "codSitDH")
       || get(dh, "situacaoDH")
-      || get(dh, "txtEstado")
-    const estadoSIAFI = codEstadoRaw.toUpperCase()
-    const estadoForcado = estadoSIAFI === "CA"       || estadoSIAFI.includes("CANCEL") ? "Cancelado"
-      : estadoSIAFI === "RE"       || estadoSIAFI.includes("REALIZ") ? "Realizado"
-      : estadoSIAFI === "PR"       || estadoSIAFI.includes("PENDEN") ? "Pendente"
+    const estadoSIAFI = codEstadoRaw.trim().toUpperCase()
+    const estadoForcado = (estadoSIAFI === "CA" || estadoSIAFI === "CANCELADO") ? "Cancelado"
+      : (estadoSIAFI === "RE" || estadoSIAFI === "REALIZADO") ? "Realizado"
+      : (estadoSIAFI === "PR" || estadoSIAFI === "PENDENTE" || estadoSIAFI === "PENDENTE DE REALIZACAO") ? "Pendente"
       : null  // null = usar lógica derivada
 
     // Dados do credor
@@ -211,6 +199,14 @@ function parsearXMLSIAFI(xmlString) {
 
       const valorPago = valorPagoDH > 0 ? valorLiquido : 0
 
+      // Coletar diagnóstico de Estado
+      if (statusPgto === "Realizado") diagEstado.realizado++
+      else if (statusPgto === "Pendente") diagEstado.pendente++
+      else if (statusPgto === "Cancelado") diagEstado.cancelado++
+      if (dtPgtoPrincipal && !diagEstado.exemploDtPgto) diagEstado.exemploDtPgto = dtPgtoPrincipal
+      if (estadoForcado && !diagEstado.exemploEstadoRaw) { diagEstado.comEstadoForcado++; diagEstado.exemploEstadoRaw = `${codEstadoRaw}→${estadoForcado}` }
+      if (statusPgto === "Pendente" && !diagEstado.exemploPendente) diagEstado.exemploPendente = numeroDH
+
       dados.push({
         chave: `${numeroDH}|${emp.ne}`, numeroDH, ano, empenho: emp.ne,
         processo, dataEmissao, tipoDH: tipo,
@@ -223,29 +219,33 @@ function parsearXMLSIAFI(xmlString) {
     }
   }
 
-  return dados
+  return { dados, diagEstado }
 }
 
 // ── Importar XML(s) — aceita múltiplos arquivos ──────────────────────────────
 ipcMain.handle("importarXML", async (event, filePaths) => {
-  // Compatibilidade: aceitar string única ou array
   if (typeof filePaths === "string") filePaths = [filePaths]
 
   let todosOsDados = []
   const arquivos = []
+  let diagTotal = { realizado: 0, pendente: 0, cancelado: 0, comDtPgto: 0, comEstadoForcado: 0, exemploDtPgto: "", exemploEstadoRaw: "", exemploPendente: "" }
 
   for (const filePath of filePaths) {
-    console.log("[importarXML] Arquivo:", filePath)
     const xmlString = lerXMLDeArquivo(filePath)
-    console.log("[importarXML] Tamanho:", xmlString.length, "bytes")
-    const dados = parsearXMLSIAFI(xmlString)
+    const { dados, diagEstado } = parsearXMLSIAFI(xmlString)
     todosOsDados = todosOsDados.concat(dados)
     arquivos.push(path.basename(filePath))
+    diagTotal.realizado += diagEstado.realizado
+    diagTotal.pendente  += diagEstado.pendente
+    diagTotal.cancelado += diagEstado.cancelado
+    if (!diagTotal.exemploDtPgto && diagEstado.exemploDtPgto) diagTotal.exemploDtPgto = diagEstado.exemploDtPgto
+    if (!diagTotal.exemploEstadoRaw && diagEstado.exemploEstadoRaw) { diagTotal.comEstadoForcado += diagEstado.comEstadoForcado; diagTotal.exemploEstadoRaw = diagEstado.exemploEstadoRaw }
+    if (!diagTotal.exemploPendente && diagEstado.exemploPendente) diagTotal.exemploPendente = diagEstado.exemploPendente
   }
 
-  // Sincronizar banco (aditivo — não remove registros anteriores)
   const result = await syncDH(todosOsDados)
   result.arquivos = arquivos
+  result.diagEstado = diagTotal
   return result
 })
 
