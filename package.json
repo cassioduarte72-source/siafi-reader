@@ -1,0 +1,22 @@
+{
+  "name": "siafi-reader",
+  "version": "1.0.0",
+  "description": "XML SIAFI reader",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "adm-zip": "^0.5.17",
+    "electron": "^40.0.0",
+    "pdf-parse": "^2.4.5",
+    "pdfkit": "^0.13.0",
+    "sqlite3": "^5.1.6",
+    "xlsx": "^0.18.5",
+    "xml2js": "^0.6.2",
+    "xmldom": "^0.6.0"
+  }
+}

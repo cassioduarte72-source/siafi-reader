@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Consolidador SIAFI</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <span class="navbar-brand">SIAFI Reader</span>
+
+  <div class="nav-group">
+    <button id="btnImportXML" class="nav-btn">Importar XML</button>
+    <div class="nav-file">
+      <button class="nav-btn">Importar Planilha</button>
+      <input type="file" id="inputPlanilha" accept=".xlsx,.xls" />
+    </div>
+  </div>
+
+  <div class="nav-group">
+    <button id="btnImportOB"    class="nav-btn">Importar OB (PDF)</button>
+    <div class="nav-file">
+      <button class="nav-btn">Importar OB (Planilha)</button>
+      <input type="file" id="inputOBPlanilha" accept=".xlsx,.xls,.csv" />
+    </div>
+    <button id="btnExportExcel" class="nav-btn">Exportar Excel</button>
+    <button id="btnExportPDF"   class="nav-btn">Exportar PDF</button>
+  </div>
+
+  <div class="nav-group">
+    <button id="btnBancoDados"  class="nav-btn accent">Banco de Dados</button>
+    <button id="btnRelatorioPF" class="nav-btn accent">Prog. Financeira</button>
+    <button id="btnRepasses"    class="nav-btn accent">Repasses</button>
+  </div>
+
+  <span class="nav-spacer"></span>
+
+  <div class="nav-group">
+    <button id="btnLimpar" class="nav-btn danger">Limpar XMLs</button>
+  </div>
+</nav>
+
+<div class="container">
+  <div id="status" class="status hidden"></div>
+
+  <div id="filtros" class="filter-bar hidden">
+    <label>Fonte:
+      <select id="filtroFonte"><option value="">Todas</option></select>
+    </label>
+    <label>Vinculacao:
+      <select id="filtroVinculacao"><option value="">Todas</option></select>
+    </label>
+    <label>Estado:
+      <select id="filtroStatus">
+        <option value="">Todos</option>
+        <option value="Pendente">Pendente</option>
+        <option value="Realizado">Realizado</option>
+        <option value="Cancelado">Cancelado</option>
+      </select>
+    </label>
+    <span id="filtroContagem" class="filter-count"></span>
+    <div id="btnGerarRepasse" class="acoes-bar hidden"></div>
+  </div>
+
+  <div class="table-wrapper">
+    <table id="tabelaPrincipal">
+      <thead id="cabecalhoTabela"></thead>
+      <tbody id="corpoTabela">
+        <tr><td colspan="13" class="empty">Importe o XML para visualizar os dados consolidados.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Modal Relatorio PF -->
+  <div id="modalPF" class="modal-overlay hidden">
+    <div class="modal-content modal-pf">
+      <div class="modal-header">
+        <h2>Programacao Financeira</h2>
+        <button id="btnFecharPF" class="modal-close">&times;</button>
+      </div>
+      <div class="pf-config">
+        <label>Mes de Programacao:
+          <select id="pfMes">
+            <option value="JAN">JAN</option><option value="FEV">FEV</option>
+            <option value="MAR">MAR</option><option value="ABR">ABR</option>
+            <option value="MAI">MAI</option><option value="JUN">JUN</option>
+            <option value="JUL">JUL</option><option value="AGO">AGO</option>
+            <option value="SET">SET</option><option value="OUT">OUT</option>
+            <option value="NOV">NOV</option><option value="DEZ">DEZ</option>
+          </select>
+        </label>
+        <label>Acao:
+          <select id="pfAcao">
+            <option value="Liberacao de Recurso Financeiro">Liberacao de Recurso Financeiro</option>
+            <option value="Devolucao de Recurso Financeiro">Devolucao de Recurso Financeiro</option>
+          </select>
+        </label>
+      </div>
+      <div class="pf-table-wrapper">
+        <table class="pf-table">
+          <thead>
+            <tr>
+              <th>Situacao</th>
+              <th>Recurso</th>
+              <th>Fonte de Recurso</th>
+              <th>Categoria de Gasto</th>
+              <th>Vinculacao de Pagamento</th>
+              <th>Mes de Programacao</th>
+              <th class="valor">Valor (R$)</th>
+            </tr>
+          </thead>
+          <tbody id="pfCorpo"></tbody>
+          <tfoot id="pfTotal"></tfoot>
+        </table>
+      </div>
+      <div class="pf-actions">
+        <button id="btnExportPFExcel" class="btn btn-success">Exportar Excel</button>
+        <button id="btnExportPFPDF" class="btn btn-success">Exportar PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Banco de Dados -->
+  <div id="modalBD" class="modal-overlay hidden">
+    <div class="modal-content modal-bd">
+      <div class="modal-header">
+        <h2>Banco de Dados - Empenhos</h2>
+        <button id="btnFecharBD" class="modal-close">&times;</button>
+      </div>
+      <div class="bd-toolbar">
+        <button id="btnNovoEmpenho" class="btn btn-primary">Novo Empenho</button>
+        <span id="bdContagem" class="bd-contagem"></span>
+        <span id="bdPendentes" class="bd-pendentes"></span>
+      </div>
+      <div id="bdForm" class="bd-form hidden">
+        <div class="bd-form-grid">
+          <label>Empenho* <input id="fEmpenho" placeholder="2026NE000001" /></label>
+          <label>CNPJ <input id="fCnpj" placeholder="00000000000000" /></label>
+          <label>Fornecedor <input id="fFornecedor" /></label>
+          <label>Ano <input id="fAno" placeholder="2026" /></label>
+          <label>Descricao <input id="fDescricao" /></label>
+          <label>RPL <input id="fRpl" placeholder="2" /></label>
+          <label>Fonte <input id="fFonte" placeholder="1000000000" /></label>
+          <label>PTRES <input id="fPtres" /></label>
+          <label>Cod. ND <input id="fNatDespesa" /></label>
+          <label>Natureza Despesa <input id="fDescNatureza" /></label>
+          <label>Cod. Subitem <input id="fSubitem" /></label>
+          <label>Desc. Subitem <input id="fDescSubitem" /></label>
+          <label>PI <input id="fPi" /></label>
+          <label>Grupo (No) <input id="fGrupoDespesa" placeholder="3" /></label>
+          <label>Grupo Despesa <input id="fDescGrupo" /></label>
+          <label>Vinculacao <input id="fVinculacao" placeholder="400" /></label>
+          <label>Categ. Despesa
+            <select id="fCategDespesa">
+              <option value="">--</option>
+              <option value="C">C - Outras Despesas Correntes</option>
+              <option value="D">D - Investimento</option>
+              <option value="A">A - Pessoal e Enc. Sociais</option>
+              <option value="E">E - Inversao Financeira</option>
+            </select>
+          </label>
+        </div>
+        <div class="bd-form-actions">
+          <button id="btnSalvarEmpenho" class="btn btn-success">Salvar</button>
+          <button id="btnCancelarEmpenho" class="btn btn-secondary">Cancelar</button>
+        </div>
+      </div>
+      <div class="bd-table-wrapper">
+        <table class="bd-table">
+          <thead>
+            <tr>
+              <th>Empenho</th><th>CNPJ</th><th>Fornecedor</th><th>Ano</th>
+              <th>RPL</th><th>Fonte</th><th>PTRES</th><th>Grupo</th>
+              <th>Vinculacao</th><th>Acoes</th>
+            </tr>
+          </thead>
+          <tbody id="bdCorpo"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Repasses -->
+  <div id="modalRepasses" class="modal-overlay hidden">
+    <div class="modal-content modal-repasses">
+      <div class="modal-header">
+        <h2>Controle de Repasses - UG 135046</h2>
+        <button id="btnFecharRepasses" class="modal-close">&times;</button>
+      </div>
+      <div class="rep-toolbar">
+        <button id="btnNovoRepasse" class="btn btn-primary">Novo Repasse</button>
+        <span id="repTotalLabel" class="rep-total-label"></span>
+      </div>
+      <div id="repForm" class="rep-form hidden">
+        <input type="hidden" id="repId" />
+        <div class="rep-form-grid">
+          <label>Data <input type="date" id="repData" /></label>
+          <label>UG Destino <input id="repUG" value="135046" /></label>
+          <label>Situacao
+            <select id="repSituacao">
+              <option value="EXE001">EXE001 - Execucao Normal</option>
+              <option value="RAP001">RAP001 - Restos a Pagar</option>
+            </select>
+          </label>
+          <label>Fonte <input id="repFonte" placeholder="1000000000" /></label>
+          <label>Vinculacao <input id="repVinculacao" placeholder="400" /></label>
+          <label>Categoria de Gasto
+            <select id="repCateg">
+              <option value="C">C - Corrente</option>
+              <option value="D">D - Capital</option>
+            </select>
+          </label>
+          <label>Valor (R$) <input type="number" id="repValor" step="0.01" placeholder="0,00" /></label>
+          <label>Observacao <input id="repObs" placeholder="PF, NS, etc." /></label>
+        </div>
+        <div class="rep-form-actions">
+          <button id="btnSalvarRepasse" class="btn btn-success">Salvar</button>
+          <button id="btnCancelarRepasse" class="btn btn-secondary">Cancelar</button>
+        </div>
+      </div>
+      <div class="rep-table-wrapper">
+        <table class="rep-table">
+          <thead>
+            <tr>
+              <th>Data</th><th>UG</th><th>Situacao</th><th>Fonte</th>
+              <th>Vinculacao</th><th>Categ.</th><th class="valor">Valor (R$)</th>
+              <th>Obs.</th><th>Acoes</th>
+            </tr>
+          </thead>
+          <tbody id="repCorpo"></tbody>
+          <tfoot id="repTotal"></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
