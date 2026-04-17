@@ -208,7 +208,7 @@ function renderizarTabela() {
 
   if (fFonte)  linhas = linhas.filter(r => r.fonte === fFonte)
   if (fVinc)   linhas = linhas.filter(r => r.vinculacao === fVinc)
-  if (fStatus) linhas = linhas.filter(r => r.statusPgto === fStatus)
+  // fStatus é aplicado por grupo de DH (abaixo), não por linha individual
 
   const cab = document.getElementById("cabecalhoTabela")
   const corpo = document.getElementById("corpoTabela")
@@ -234,27 +234,39 @@ function renderizarTabela() {
     atualizarPainelDed()
   })
 
-  if (linhas.length === 0) {
+  const hoje = new Date().toISOString().slice(0, 10)
+
+  // Agrupar todas as linhas por DH
+  const dhGroupsAll = {}
+  for (const r of linhas) {
+    if (!dhGroupsAll[r.numeroDH]) dhGroupsAll[r.numeroDH] = []
+    dhGroupsAll[r.numeroDH].push(r)
+  }
+
+  // Filtrar grupos por Estado (usa mesma lógica do render para consistência)
+  const dhKeys = Object.keys(dhGroupsAll).filter(numeroDH => {
+    if (!fStatus) return true
+    const emps = dhGroupsAll[numeroDH]
+    const isCanc = emps.some(r => r.statusPgto === "Cancelado")
+    const isReal = emps.some(r => r.statusPgto === "Realizado") || (obMap[numeroDH] || []).length > 0
+    const st = isCanc ? "Cancelado" : isReal ? "Realizado" : "Pendente"
+    return st === fStatus
+  })
+
+  if (dhKeys.length === 0) {
     corpo.innerHTML = `<tr><td colspan="13" class="empty">${
       dadosConsolidados.length === 0
         ? "Importe o XML para visualizar os dados consolidados."
         : "Nenhum registro encontrado com os filtros selecionados."
     }</td></tr>`
+    filtroContagem.textContent = `0 registros`
     return
   }
 
-  const hoje = new Date().toISOString().slice(0, 10)
   let html = ""
 
-  // Agrupar por DH
-  const dhGroups = {}
-  for (const r of linhas) {
-    if (!dhGroups[r.numeroDH]) dhGroups[r.numeroDH] = []
-    dhGroups[r.numeroDH].push(r)
-  }
-
-  for (const numeroDH of Object.keys(dhGroups)) {
-    const emps = dhGroups[numeroDH]
+  for (const numeroDH of dhKeys) {
+    const emps = dhGroupsAll[numeroDH]
     const first = emps[0]
     const docPF = first.documentoPF || ""
 
@@ -395,7 +407,7 @@ function renderizarTabela() {
   }
 
   corpo.innerHTML = html
-  filtroContagem.textContent = `${linhas.length} registros`
+  filtroContagem.textContent = `${dhKeys.length} DH(s)`
 }
 
 // ── Eventos dos filtros ──────────────────────────────────────────────────────
