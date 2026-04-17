@@ -194,14 +194,16 @@ function parsearXMLSIAFI(xmlString) {
       if (estadoForcado) {
         // 1ª prioridade: Estado lido diretamente do campo XML do SIAFI
         statusPgto = estadoForcado
-      } else if (dtPgtoPrincipal || valorPagoDH > 0) {
-        // 2ª prioridade: se o DH tem data de pgto do principal OU valor pago registrado,
-        // o DH foi REALIZADO — mesmo que as deduções não tenham dtPgto no XML.
-        // Isso corrige NPs com deduções pagas mas sem dtPgtoReceb individual no XML.
+      } else if (dtPgtoPrincipal) {
+        // 2ª prioridade: data de pgto/recebimento preenchida = DH efetivamente pago.
+        // Não usar valorPagoDH (dadosPgto.vlr) — SIAFI preenche esse campo mesmo em
+        // DHs ainda não realizados (é o valor líquido autorizado, não o pago).
         statusPgto = "Realizado"
       } else if (temDedPendente) {
         statusPgto = "Pendente"
       } else if (emp.deducoes.length > 0) {
+        // Todas as deduções têm data de pagamento mas sem dtPgtoPrincipal:
+        // considera pago (deduções quitadas indicam realização do DH).
         statusPgto = "Realizado"
       } else {
         statusPgto = "Pendente"
