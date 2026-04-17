@@ -180,20 +180,20 @@ function parsearXMLSIAFI(xmlString) {
 
       let statusPgto = ""
       if (estadoForcado) {
-        // 1ª prioridade: Estado lido diretamente do campo XML do SIAFI
+        // 1ª prioridade: Estado lido diretamente do XML do SIAFI
         statusPgto = estadoForcado
-      } else if (dtPgtoPrincipal) {
-        // 2ª prioridade: data de pgto/recebimento preenchida = DH efetivamente pago.
-        // Não usar valorPagoDH (dadosPgto.vlr) — SIAFI preenche esse campo mesmo em
-        // DHs ainda não realizados (é o valor líquido autorizado, não o pago).
-        statusPgto = "Realizado"
       } else if (temDedPendente) {
+        // Tem deduções (DARF/GPS/DAR) ainda sem data de pagamento → Pendente
         statusPgto = "Pendente"
       } else if (emp.deducoes.length > 0) {
-        // Todas as deduções têm data de pagamento mas sem dtPgtoPrincipal:
-        // considera pago (deduções quitadas indicam realização do DH).
+        // Todas as deduções têm data de pagamento → DH quitado
         statusPgto = "Realizado"
       } else {
+        // Sem deduções e sem campo de estado no XML → Pendente até OB ser importada.
+        // Nota: dadosBasicos.dtPgtoReceb é a data de PROGRAMAÇÃO (não de realização),
+        // está preenchida em todos os DHs autorizados — não pode ser usada como
+        // indicador de pagamento efetivo. O estado "Realizado" é confirmado pela OB
+        // importada (obMap), que substitui este valor na camada de exibição.
         statusPgto = "Pendente"
       }
 
