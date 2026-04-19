@@ -58,7 +58,6 @@ function parsearXMLSIAFI(xmlString) {
   const nsDH = "http://services.docHabil.cpr.siafi.tesouro.fazenda.gov.br/"
   const dhList = doc.getElementsByTagNameNS(nsDH, "CprDhConsultar")
 
-  const hoje = new Date().toISOString().slice(0, 10)
   const dados = []
 
   // ── Diagnóstico de Estado (retornado junto com os dados para exibir na UI)
@@ -175,27 +174,14 @@ function parsearXMLSIAFI(xmlString) {
       const valorDeducao = parseFloat(emp.deducoes.reduce((s, d) => s + d.vlr, 0).toFixed(2))
       const valorLiquido = parseFloat((emp.itemVlr - valorDeducao).toFixed(2))
 
-      const dedsPendentes = emp.deducoes.filter(d => !d.dtPgto || d.dtPgto > hoje)
-      const temDedPendente = dedsPendentes.length > 0
-
       let statusPgto = ""
-      if (estadoForcado) {
-        // 1ª prioridade: Estado lido diretamente do XML do SIAFI
-        statusPgto = estadoForcado
-      } else if (temDedPendente) {
-        // Tem deduções (DARF/GPS/DAR) ainda sem data de pagamento → Pendente
-        statusPgto = "Pendente"
-      } else if (emp.deducoes.length > 0) {
-        // Todas as deduções têm data de pagamento → DH quitado
-        statusPgto = "Realizado"
-      } else {
-        // Sem deduções e sem campo de estado no XML → Pendente até OB ser importada.
-        // Nota: dadosBasicos.dtPgtoReceb é a data de PROGRAMAÇÃO (não de realização),
-        // está preenchida em todos os DHs autorizados — não pode ser usada como
-        // indicador de pagamento efetivo. O estado "Realizado" é confirmado pela OB
-        // importada (obMap), que substitui este valor na camada de exibição.
-        statusPgto = "Pendente"
-      }
+      // statusPgto: "Pendente" por padrão.
+      // O SIAFI preenche dtPgtoReceb (tanto em dadosBasicos quanto em cada deducao)
+      // com a data de PROGRAMAÇÃO do pagamento — não com a data de realização efetiva.
+      // Por isso nenhum campo de data do XML é confiável para detectar "Realizado".
+      // "Realizado" é confirmado exclusivamente pelas OBs importadas (obMap),
+      // tratado na camada de exibição em renderizarTabela.
+      statusPgto = estadoForcado || "Pendente"
 
       const valorPago = valorPagoDH > 0 ? valorLiquido : 0
 
